@@ -1,0 +1,66 @@
+##############################################################################
+#############      Multiome Pipeline Commands      ###########################
+##############################################################################
+
+### Manually type the commands below to start each step in the indicated order
+### Each step needs the previous step to be completed 
+
+
+## scripts directory
+cd /group/soranzo/paola.benaglio/k562_multiome/scripts/
+
+######   Step 1: Cellranger (~ 12 hrs) ######################
+############################################################
+
+
+sbatch cellranger_job_1278.bash
+sbatch cellranger_job_1279.bash
+sbatch cellranger_job_1280.bash
+sbatch cellranger_job_1281.bash
+
+
+######   Step 2: Barcode deconvolution (~ 1 hr) ##############
+##########################################################
+
+bash Deconvolute_atac.sh
+sbatch Deconvolute_Larry2.sh
+Rscript Larry_counts.R 
+
+
+######   Step 3: preliminary filters and qc (~ 5 hrs)######
+##########################################################
+
+for samp in MCO_1278 MCO_1279 MCO_1280 MCO_1281;
+do
+sbatch --export=NAME=$samp run_seurat_firstpass.bash
+sbatch --export=NAME=$samp run_cellbender.bash
+
+done
+
+
+
+
+######   Step 4: On filtered cells:snATAC window matrices (~ 5 hrs) and Amulet ######
+##########################################################
+
+for samp in  MCO_1278 MCO_1279 MCO_1280 MCO_1281;
+do
+sbatch --export=NAME=$samp run_snATAC_pipeline.bash
+sbatch --export=NAME=$samp run_amulet.bash 
+done
+
+
+######   Step 4: Final Individual object ######
+##########################################################
+
+for samp in MCO_1278 MCO_1279 MCO_1280 MCO_1281;
+do
+sbatch --export=NAME=$samp run_seurat_secondpass.bash
+done
+
+
+##### Step 5: Merged object #####
+##########################################################
+sbatch run_merge_samples.bash
+
+
